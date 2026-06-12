@@ -1,0 +1,12 @@
+Subject: Quick idea for {{CompanyName}}
+
+Hi {{FirstName}},
+
+I came across {{CompanyDomain}} while researching companies in your space — really impressed by what you're building.
+
+I wanted to reach out directly because I think there's a strong fit with what we do. We help fast-growing teams automate outbound sequences to multiply their sales pipeline.
+
+Would you be open to a 15-minute call this week?
+
+Best,
+{{SenderName}}

@@ -1,4 +1,6 @@
 import readline from 'readline';
+import fs from 'fs';
+import path from 'path';
 import { logger } from '../utils/logger.js';
 import { delay } from '../utils/delay.js';
 
@@ -13,25 +15,49 @@ function getCompanyName(domain) {
 }
 
 /**
- * Helper to construct the email subject and body.
+ * Reads template.txt and replaces placeholders with contact data.
  */
-function generateEmail(contact) {
+function generateEmailFromTemplate(contact) {
   const firstName = contact.fullName.split(' ')[0] || 'there';
   const companyName = getCompanyName(contact.companyDomain);
   const companyDomain = contact.companyDomain;
   const senderName = process.env.SENDER_NAME || 'Alex';
 
-  const subject = `Quick idea for ${companyName}`;
-  const body = `Hi ${firstName},
+  let subject = `Quick idea for ${companyName}`;
+  let body = `Hi ${firstName},\n\nI came across ${companyDomain}...`;
 
-I came across ${companyDomain} while researching companies in your space — really impressed by what you're building.
+  try {
+    const templatePath = path.resolve('template.txt');
+    if (fs.existsSync(templatePath)) {
+      const templateContent = fs.readFileSync(templatePath, 'utf-8');
+      
+      // Split subject and body by matching "Subject: ..." at the start
+      const lines = templateContent.split('\n');
+      let subjectLine = lines.find(l => l.toLowerCase().startsWith('subject:'));
+      let bodyContent = templateContent;
 
-I wanted to reach out directly because I think there's a strong fit with what we do. We help fast-growing teams automate outbound workflows to multiply their sales pipelines.
+      if (subjectLine) {
+        subject = subjectLine.replace(/subject:/i, '').trim();
+        // Body is everything after the subject line
+        const subjectIdx = lines.indexOf(subjectLine);
+        bodyContent = lines.slice(subjectIdx + 1).join('\n').trim();
+      }
 
-Would you be open to a 15-minute call this week?
+      // Replace placeholders
+      const replacer = (text) => {
+        return text
+          .replace(/\{\{FirstName\}\}/g, firstName)
+          .replace(/\{\{CompanyName\}\}/g, companyName)
+          .replace(/\{\{CompanyDomain\}\}/g, companyDomain)
+          .replace(/\{\{SenderName\}\}/g, senderName);
+      };
 
-Best,
-${senderName}`;
+      subject = replacer(subject);
+      body = replacer(bodyContent);
+    }
+  } catch (err) {
+    logger.skip(4, `Failed to load template.txt, using default template: ${err.message}`);
+  }
 
   return { subject, body };
 }
@@ -52,7 +78,7 @@ export async function sendOutreach(enrichedContacts) {
 
   const uniqueCompanies = new Set(enrichedContacts.map(c => c.companyDomain)).size;
   const sampleContact = enrichedContacts[0];
-  const { subject: sampleSubject, body: sampleBody } = generateEmail(sampleContact);
+  const { subject: sampleSubject, body: sampleBody } = generateEmailFromTemplate(sampleContact);
   
   // Get first 3 lines of body
   const sampleLines = sampleBody.split('\n').slice(0, 3).join('\n');
@@ -63,7 +89,7 @@ export async function sendOutreach(enrichedContacts) {
   console.log(`  Contacts ready:    ${enrichedContacts.length}`);
   console.log(`  Companies covered: ${uniqueCompanies}`);
   console.log('');
-  console.log('  SAMPLE EMAIL');
+  console.log('  SAMPLE EMAIL (Customized from template.txt)');
   console.log(`  To:      ${sampleContact.fullName} <${sampleContact.email}>`);
   console.log(`  Subject: ${sampleSubject}`);
   console.log('');
@@ -103,10 +129,9 @@ export async function sendOutreach(enrichedContacts) {
   let failCount = 0;
 
   for (const contact of enrichedContacts) {
-    const { subject, body } = generateEmail(contact);
+    const { subject, body } = generateEmailFromTemplate(contact);
 
     if (isMock) {
-      // Small simulated delay for delivery realism
       await delay(200);
       logger.success(4, `Sent to ${contact.email}`);
       sentCount++;
