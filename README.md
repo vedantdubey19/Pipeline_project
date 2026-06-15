@@ -85,7 +85,7 @@ SENDER_NAME=Your Name
    ```
 2. Launch the orchestrator:
    ```bash
-   node index.js
+  
    ```
 
 *(Note: Leaving the keys starting with `mock_` in your `.env` file automatically activates mock mode, which generates simulated test data across all stages for demonstration purposes).*
