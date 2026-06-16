@@ -75,8 +75,7 @@ SENDER_EMAIL=your@configured_sender_domain.com
 SENDER_NAME=Your Name
 ```
 
----
-
+-
 ## How to Run
 
 1. Install dependencies:
